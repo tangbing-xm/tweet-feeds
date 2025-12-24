@@ -25,10 +25,7 @@ export async function GET(req: Request) {
     .limit(limit);
 
   const items = rows.map((r) => ({
-    date:
-      typeof r.date_beijing === "string"
-        ? r.date_beijing
-        : r.date_beijing.toISOString().slice(0, 10),
+    date: r.date_beijing,
     tweet_count: r.tweet_count,
     updated_at: r.updated_at.toISOString(),
   }));

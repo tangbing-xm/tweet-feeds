@@ -119,11 +119,9 @@ async function handleIngest(req: Request) {
           const publishedAt = new Date(t.createdAt);
           if (Number.isNaN(publishedAt.getTime())) continue;
 
-          oldestCreatedAt = oldestCreatedAt
-            ? publishedAt < oldestCreatedAt
-              ? publishedAt
-              : oldestCreatedAt
-            : publishedAt;
+          if (!oldestCreatedAt || publishedAt.getTime() < oldestCreatedAt.getTime()) {
+            oldestCreatedAt = publishedAt;
+          }
 
           if (publishedAt < lookbackStart) continue;
           if (t.isReply) continue;
