@@ -22,10 +22,8 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
   // Extract tweet ID from URL
   const tweetId = tweetUrl.match(/status\/(\d+)/)?.[1];
 
-  // Get current theme
-  const getTheme = useCallback(() => {
-    return document.documentElement.classList.contains("dark") ? "dark" : "light";
-  }, []);
+  // Always render with light theme to keep embed background white
+  const getTheme = useCallback(() => "light", []);
 
   const scheduleWork = useCallback((fn: () => void) => {
     const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => void })
@@ -104,7 +102,7 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
           obs.disconnect();
         }
       },
-      { root: null, rootMargin: "600px 0px", threshold: 0 },
+      { root: null, rootMargin: "400px 0px", threshold: 0 },
     );
 
     obs.observe(el);
@@ -134,33 +132,6 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
 
     loadTweet();
   }, [tweetId, shouldLoad, getTheme, renderTweet, scheduleWork]);
-
-  // Handle theme change - smooth transition without showing skeleton
-  useEffect(() => {
-    let debounceTimer: NodeJS.Timeout;
-
-    const observer = new MutationObserver(() => {
-      const newTheme = getTheme();
-      
-      // Only re-render if theme actually changed and tweet is already loaded
-      if (newTheme !== currentThemeRef.current && !isLoading && !error && containerRef.current) {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          renderTweet(containerRef.current!, newTheme, true);
-        }, 100);
-      }
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    return () => {
-      observer.disconnect();
-      clearTimeout(debounceTimer);
-    };
-  }, [getTheme, isLoading, error, renderTweet]);
 
   if (!tweetId) {
     return null;

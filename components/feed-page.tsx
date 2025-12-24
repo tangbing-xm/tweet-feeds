@@ -37,7 +37,8 @@ export function FeedPage() {
 
   // Window hours: 48h for mobile, 72h for desktop
   const windowHours = isMobile ? 48 : 72;
-  const pageSize = isMobile ? 6 : 10;
+  // Fewer initial tweets to reduce main-thread & LCP pressure
+  const pageSize = isMobile ? 4 : 6;
 
   // Date tree for sidebar
   const { dateTree } = useDateTree();
