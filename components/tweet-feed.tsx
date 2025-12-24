@@ -122,28 +122,23 @@ export function TweetFeed({
   }
 
   return (
-    <div className={cn("space-y-8", className)}>
+    <div className={cn("space-y-4", className)}>
       {dateKeys.map((dateKey) => (
         <section key={dateKey}>
           {/* Date Heading */}
-          <div className="sticky top-0 z-10 py-4 bg-background/95 backdrop-blur-xl border-b border-border/50">
-            <div className="flex items-center gap-4">
-              <h2 className="text-lg font-semibold tracking-tight">
+          <div className="sticky top-0 z-10 py-2 bg-background/95 backdrop-blur-xl border-b border-border/50">
+            <div className="flex items-center gap-3">
+              <h2 className="text-base font-semibold tracking-tight">
                 {formatDateHeading(dateKey)}
               </h2>
               <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
             </div>
           </div>
 
-          {/* Tweets for this date - 2-column grid layout with proper width */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-4">
+          {/* Tweets for this date - 2-column grid layout with auto height */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pt-3 items-start">
             {groupedTweets.get(dateKey)?.map((tweet) => (
-              <div
-                key={tweet.tweet_id}
-                className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden transition-all duration-200 hover:border-border hover:shadow-sm"
-              >
-                <TweetEmbed tweetUrl={tweet.tweet_url} />
-              </div>
+              <TweetEmbed key={tweet.tweet_id} tweetUrl={tweet.tweet_url} />
             ))}
           </div>
         </section>

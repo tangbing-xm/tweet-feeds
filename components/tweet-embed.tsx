@@ -126,7 +126,7 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
   }
 
   return (
-    <div className={cn("relative min-h-[200px]", className)}>
+    <div className={cn("relative min-h-[120px]", className)}>
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-full max-w-[550px] space-y-4 p-4">
