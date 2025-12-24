@@ -135,10 +135,12 @@ export function TweetFeed({
             </div>
           </div>
 
-          {/* Tweets for this date - 2-column grid layout with auto height */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pt-3 items-start">
+          {/* Tweets for this date - masonry layout with CSS columns */}
+          <div className="pt-3 columns-1 lg:columns-2 gap-3">
             {groupedTweets.get(dateKey)?.map((tweet) => (
-              <TweetEmbed key={tweet.tweet_id} tweetUrl={tweet.tweet_url} />
+              <div key={tweet.tweet_id} className="break-inside-avoid mb-3">
+                <TweetEmbed tweetUrl={tweet.tweet_url} />
+              </div>
             ))}
           </div>
         </section>
