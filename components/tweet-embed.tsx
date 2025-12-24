@@ -73,7 +73,6 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
         const tweet = await window.twttr.widgets.createTweet(tweetId, container, {
           theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
           dnt: true, // Do not track
-          align: "center",
         });
         
         if (tweet) {
@@ -103,7 +102,6 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
           window.twttr.widgets.createTweet(tweetId, containerRef.current, {
             theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
             dnt: true,
-            align: "center",
           }).then((tweet) => {
             if (tweet) {
               setIsLoading(false);
@@ -163,7 +161,7 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
       <div
         ref={containerRef}
         className={cn(
-          "tweet-container flex justify-center",
+          "tweet-container",
           isLoading && "opacity-0",
           error && "hidden"
         )}
