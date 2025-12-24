@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -28,28 +28,89 @@ declare global {
 export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [error, setError] = useState(false);
+  const currentThemeRef = useRef<string>("");
 
   // Extract tweet ID from URL
   const tweetId = tweetUrl.match(/status\/(\d+)/)?.[1];
 
+  // Get current theme
+  const getTheme = useCallback(() => {
+    return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  }, []);
+
+  // Render tweet with specified theme
+  const renderTweet = useCallback(async (container: HTMLElement, theme: string, isThemeChange = false) => {
+    if (!window.twttr?.widgets || !tweetId) return;
+
+    try {
+      if (isThemeChange) {
+        setIsTransitioning(true);
+      }
+
+      // Create a temporary container for the new tweet
+      const tempContainer = document.createElement("div");
+      tempContainer.style.opacity = "0";
+      tempContainer.style.transition = "opacity 200ms ease-in-out";
+      container.appendChild(tempContainer);
+
+      const tweet = await window.twttr.widgets.createTweet(tweetId, tempContainer, {
+        theme,
+        dnt: true,
+      });
+
+      if (tweet) {
+        // Remove old tweet (all children except the new tempContainer)
+        const children = Array.from(container.children);
+        for (const child of children) {
+          if (child !== tempContainer) {
+            child.remove();
+          }
+        }
+
+        // Fade in the new tweet
+        requestAnimationFrame(() => {
+          tempContainer.style.opacity = "1";
+        });
+
+        currentThemeRef.current = theme;
+        setIsLoading(false);
+        setIsTransitioning(false);
+      } else {
+        tempContainer.remove();
+        if (!isThemeChange) {
+          setError(true);
+          setIsLoading(false);
+        }
+        setIsTransitioning(false);
+      }
+    } catch {
+      if (!isThemeChange) {
+        setError(true);
+        setIsLoading(false);
+      }
+      setIsTransitioning(false);
+    }
+  }, [tweetId]);
+
+  // Initial load
   useEffect(() => {
     if (!tweetId || !containerRef.current) return;
 
     const container = containerRef.current;
-    
+    const theme = getTheme();
+    currentThemeRef.current = theme;
+
     const loadTweet = async () => {
-      // Wait for Twitter widgets to be ready
       if (!window.twttr?.widgets) {
-        // Retry after script loads
         const checkInterval = setInterval(() => {
           if (window.twttr?.widgets) {
             clearInterval(checkInterval);
-            renderTweet();
+            renderTweet(container, theme);
           }
         }, 100);
-        
-        // Timeout after 5 seconds
+
         setTimeout(() => {
           clearInterval(checkInterval);
           if (!window.twttr?.widgets) {
@@ -59,55 +120,26 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
         }, 5000);
         return;
       }
-      
-      renderTweet();
-    };
 
-    const renderTweet = async () => {
-      if (!window.twttr?.widgets || !container) return;
-      
-      try {
-        // Clear container
-        container.innerHTML = "";
-        
-        const tweet = await window.twttr.widgets.createTweet(tweetId, container, {
-          theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
-          dnt: true, // Do not track
-        });
-        
-        if (tweet) {
-          setIsLoading(false);
-        } else {
-          setError(true);
-          setIsLoading(false);
-        }
-      } catch {
-        setError(true);
-        setIsLoading(false);
-      }
+      renderTweet(container, theme);
     };
 
     loadTweet();
-  }, [tweetId]);
+  }, [tweetId, getTheme, renderTweet]);
 
-  // Re-render on theme change
+  // Handle theme change - smooth transition without showing skeleton
   useEffect(() => {
+    let debounceTimer: NodeJS.Timeout;
+
     const observer = new MutationObserver(() => {
-      if (containerRef.current && window.twttr?.widgets && !isLoading && !error) {
-        // Re-create tweet with new theme
-        containerRef.current.innerHTML = "";
-        setIsLoading(true);
-        
-        if (tweetId) {
-          window.twttr.widgets.createTweet(tweetId, containerRef.current, {
-            theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
-            dnt: true,
-          }).then((tweet) => {
-            if (tweet) {
-              setIsLoading(false);
-            }
-          });
-        }
+      const newTheme = getTheme();
+      
+      // Only re-render if theme actually changed and tweet is already loaded
+      if (newTheme !== currentThemeRef.current && !isLoading && !error && containerRef.current) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          renderTweet(containerRef.current!, newTheme, true);
+        }, 100);
       }
     });
 
@@ -116,8 +148,11 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
       attributeFilter: ["class"],
     });
 
-    return () => observer.disconnect();
-  }, [tweetId, isLoading, error]);
+    return () => {
+      observer.disconnect();
+      clearTimeout(debounceTimer);
+    };
+  }, [getTheme, isLoading, error, renderTweet]);
 
   if (!tweetId) {
     return null;
@@ -125,7 +160,8 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
 
   return (
     <div className={cn("relative min-h-[120px]", className)}>
-      {isLoading && (
+      {/* Only show skeleton on initial load, not on theme change */}
+      {isLoading && !isTransitioning && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-full max-w-[550px] space-y-4 p-4">
             <div className="flex items-center space-x-3">
@@ -144,7 +180,7 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
           </div>
         </div>
       )}
-      
+
       {error && (
         <div className="flex items-center justify-center p-8 text-muted-foreground">
           <a
@@ -157,12 +193,12 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
           </a>
         </div>
       )}
-      
+
       <div
         ref={containerRef}
         className={cn(
-          "tweet-container",
-          isLoading && "opacity-0",
+          "tweet-container transition-opacity duration-200",
+          isLoading && !isTransitioning && "opacity-0",
           error && "hidden"
         )}
       />
