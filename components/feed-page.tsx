@@ -24,17 +24,20 @@ export function FeedPage() {
   );
   
   // Detect mobile
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < 768;
+  });
   
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   // Window hours: 48h for mobile, 72h for desktop
   const windowHours = isMobile ? 48 : 72;
+  const pageSize = isMobile ? 6 : 10;
 
   // Date tree for sidebar
   const { dateTree } = useDateTree();
@@ -50,6 +53,7 @@ export function FeedPage() {
     vendor: selectedVendor,
     date: selectedDate,
     windowHours,
+    limit: pageSize,
   });
 
   // Update URL when filters change

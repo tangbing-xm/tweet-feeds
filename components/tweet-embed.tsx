@@ -3,33 +3,20 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { ensureTwitterWidgets } from "@/lib/twitter-widgets";
 
 interface TweetEmbedProps {
   tweetUrl: string;
   className?: string;
 }
 
-// Declare Twitter widgets type
-declare global {
-  interface Window {
-    twttr?: {
-      widgets: {
-        load: (element?: HTMLElement) => Promise<void>;
-        createTweet: (
-          tweetId: string,
-          container: HTMLElement,
-          options?: Record<string, unknown>
-        ) => Promise<HTMLElement | undefined>;
-      };
-    };
-  }
-}
-
 export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
+  const hostRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [error, setError] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(false);
   const currentThemeRef = useRef<string>("");
 
   // Extract tweet ID from URL
@@ -38,6 +25,16 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
   // Get current theme
   const getTheme = useCallback(() => {
     return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  }, []);
+
+  const scheduleWork = useCallback((fn: () => void) => {
+    const ric = (window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => void })
+      .requestIdleCallback;
+    if (typeof ric === "function") {
+      ric(fn, { timeout: 1500 });
+    } else {
+      window.setTimeout(fn, 0);
+    }
   }, []);
 
   // Render tweet with specified theme
@@ -94,38 +91,49 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
     }
   }, [tweetId]);
 
+  // Lazy trigger: only render when near viewport
+  useEffect(() => {
+    if (!hostRef.current || shouldLoad) return;
+
+    const el = hostRef.current;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting) {
+          setShouldLoad(true);
+          obs.disconnect();
+        }
+      },
+      { root: null, rootMargin: "600px 0px", threshold: 0 },
+    );
+
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [shouldLoad]);
+
   // Initial load
   useEffect(() => {
     if (!tweetId || !containerRef.current) return;
+    if (!shouldLoad) return;
 
     const container = containerRef.current;
     const theme = getTheme();
     currentThemeRef.current = theme;
 
     const loadTweet = async () => {
-      if (!window.twttr?.widgets) {
-        const checkInterval = setInterval(() => {
-          if (window.twttr?.widgets) {
-            clearInterval(checkInterval);
-            renderTweet(container, theme);
-          }
-        }, 100);
-
-        setTimeout(() => {
-          clearInterval(checkInterval);
-          if (!window.twttr?.widgets) {
-            setError(true);
-            setIsLoading(false);
-          }
-        }, 5000);
-        return;
+      try {
+        await ensureTwitterWidgets();
+        scheduleWork(() => {
+          void renderTweet(container, theme);
+        });
+      } catch {
+        setError(true);
+        setIsLoading(false);
       }
-
-      renderTweet(container, theme);
     };
 
     loadTweet();
-  }, [tweetId, getTheme, renderTweet]);
+  }, [tweetId, shouldLoad, getTheme, renderTweet, scheduleWork]);
 
   // Handle theme change - smooth transition without showing skeleton
   useEffect(() => {
@@ -159,7 +167,7 @@ export function TweetEmbed({ tweetUrl, className }: TweetEmbedProps) {
   }
 
   return (
-    <div className={cn("relative min-h-[120px]", className)}>
+    <div ref={hostRef} className={cn("relative min-h-[120px]", className)}>
       {/* Only show skeleton on initial load, not on theme change */}
       {isLoading && !isTransitioning && (
         <div className="absolute inset-0 flex items-center justify-center">

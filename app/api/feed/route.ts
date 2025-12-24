@@ -101,7 +101,15 @@ export async function GET(req: Request) {
         })
       : null;
 
-  return NextResponse.json({ items, nextCursor });
+  const cacheControl =
+    mode === "date"
+      ? "public, s-maxage=300, stale-while-revalidate=600"
+      : "public, s-maxage=60, stale-while-revalidate=300";
+
+  return NextResponse.json(
+    { items, nextCursor },
+    { headers: { "Cache-Control": cacheControl } },
+  );
 }
 
 

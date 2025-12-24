@@ -138,7 +138,14 @@ export function TweetFeed({
           {/* Tweets for this date - masonry layout with CSS columns */}
           <div className="pt-3 columns-1 lg:columns-2 gap-3">
             {groupedTweets.get(dateKey)?.map((tweet) => (
-              <div key={tweet.tweet_id} className="break-inside-avoid mb-3">
+              <div
+                key={tweet.tweet_id}
+                className="break-inside-avoid mb-3"
+                style={{
+                  contentVisibility: "auto",
+                  containIntrinsicSize: "550px 300px",
+                }}
+              >
                 <TweetEmbed tweetUrl={tweet.tweet_url} />
               </div>
             ))}

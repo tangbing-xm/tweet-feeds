@@ -18,9 +18,10 @@ interface UseFeedOptions {
   vendor: string;
   date: string | null;
   windowHours: number;
+  limit?: number;
 }
 
-export function useFeed({ vendor, date, windowHours }: UseFeedOptions) {
+export function useFeed({ vendor, date, windowHours, limit }: UseFeedOptions) {
   const [items, setItems] = useState<TweetItem[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,6 +32,7 @@ export function useFeed({ vendor, date, windowHours }: UseFeedOptions) {
   const buildUrl = useCallback(
     (cursorParam?: string | null) => {
       const params = new URLSearchParams();
+      const pageSize = limit ?? 10;
       
       if (date) {
         params.set("mode", "date");
@@ -41,7 +43,7 @@ export function useFeed({ vendor, date, windowHours }: UseFeedOptions) {
       }
       
       params.set("vendor", vendor);
-      params.set("limit", "10");
+      params.set("limit", String(pageSize));
       
       if (cursorParam) {
         params.set("cursor", cursorParam);
@@ -49,7 +51,7 @@ export function useFeed({ vendor, date, windowHours }: UseFeedOptions) {
       
       return `/api/feed?${params.toString()}`;
     },
-    [vendor, date, windowHours]
+    [vendor, date, windowHours, limit]
   );
 
   // Fetch initial data
@@ -109,6 +111,7 @@ export function useFeed({ vendor, date, windowHours }: UseFeedOptions) {
     refetch: fetchData,
   };
 }
+
 
 
 

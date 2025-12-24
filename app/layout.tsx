@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 
 import { I18nProvider } from "@/lib/i18n";
 import "./globals.css";
@@ -47,12 +46,6 @@ export default function RootLayout({
         <I18nProvider>
           {children}
         </I18nProvider>
-        
-        {/* Twitter Widgets Script */}
-        <Script
-          src="https://platform.twitter.com/widgets.js"
-          strategy="lazyOnload"
-        />
       </body>
     </html>
   );
